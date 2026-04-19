@@ -1,9 +1,8 @@
-
-
 import pandas as pd
 import numpy as np
 from sklearn.preprocessing import StandardScaler
 import joblib
+from pathlib import Path
 
 # ======================================================
 # CONFIG
@@ -19,9 +18,11 @@ TRAIN_RATIO = 0.70
 VAL_RATIO = 0.15
 TEST_RATIO = 0.15
 
-XGB_DIR = "data/xgb_data/"
-LSTM_DIR = "data/lstm_data/"
+XGB_DIR = Path("data/xgb_data")
+LSTM_DIR = Path("data/lstm_data")
 
+XGB_DIR.mkdir(parents=True, exist_ok=True)
+LSTM_DIR.mkdir(parents=True, exist_ok=True)
 
 # Laod Data
 df = pd.read_csv(FILE_PATH)

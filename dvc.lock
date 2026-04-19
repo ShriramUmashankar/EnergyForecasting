@@ -1,0 +1,25 @@
+schema: '2.0'
+stages:
+  preprocess:
+    cmd: python src/data_preprocessing.py
+    deps:
+    - path: data/raw_data/energydata_complete.csv
+      hash: md5
+      md5: 69ef922b5fcafcd49097cfc09e07167e
+      size: 11979363
+      isexec: true
+    - path: src/data_preprocessing.py
+      hash: md5
+      md5: 5b4f46e5cb8ac92fbb2047a4cacc3989
+      size: 5128
+    outs:
+    - path: data/lstm_data
+      hash: md5
+      md5: 8acb20ac0f7542c092e8f89d79b81079.dir
+      size: 1259634463
+      nfiles: 7
+    - path: data/xgb_data
+      hash: md5
+      md5: 0ac3e4459a489bb145b7537b4ecc8c0a.dir
+      size: 12211861
+      nfiles: 6
