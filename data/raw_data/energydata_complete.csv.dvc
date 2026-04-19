@@ -1,0 +1,6 @@
+outs:
+- md5: 69ef922b5fcafcd49097cfc09e07167e
+  size: 11979363
+  isexec: true
+  hash: md5
+  path: energydata_complete.csv

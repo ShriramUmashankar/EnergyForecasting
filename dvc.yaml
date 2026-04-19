@@ -1,0 +1,9 @@
+stages:
+  preprocess:
+    cmd: python src/data_preprocessing.py
+    deps:
+    - data/raw_data/energydata_complete.csv
+    - src/data_preprocessing.py
+    outs:
+    - data/lstm_data
+    - data/xgb_data
