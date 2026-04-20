@@ -1,9 +1,9 @@
 stages:
   preprocess:
-    cmd: python src/data_preprocessing.py
+    cmd: python src/data_processing.py
     deps:
-    - data/raw_data/energydata_complete.csv
-    - src/data_preprocessing.py
+    - data/raw_data/household_power_consumption.txt
+    - src/data_processing.py
     outs:
-    - data/lstm_data
-    - data/xgb_data
+    - data/processed/test.csv
+    - data/processed/train.csv
