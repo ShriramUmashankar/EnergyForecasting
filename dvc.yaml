@@ -7,3 +7,17 @@ stages:
     outs:
     - data/processed/test.csv
     - data/processed/train.csv
+
+  train:
+    cmd: python src/train.py
+    deps:
+      - src/train.py
+      - data/processed/train.csv
+      - params.yaml
+    params:
+      - model
+      - features
+    outs:
+      - model/xgb_model.pkl
+    metrics:
+      - model/metrics.json

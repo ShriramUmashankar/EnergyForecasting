@@ -1,0 +1,14 @@
+model:
+  n_estimators: 1500
+  max_depth: 2
+  learning_rate: 0.01
+  subsample: 0.8
+  colsample_bytree: 0.8
+  min_child_weight: 1
+  gamma: 0
+  reg_alpha: 0
+  reg_lambda: 1
+
+features:
+  lag_start: 1
+  lag_end: 24

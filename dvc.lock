@@ -1,25 +1,61 @@
 schema: '2.0'
 stages:
   preprocess:
-    cmd: python src/data_preprocessing.py
+    cmd: python src/data_processing.py
     deps:
-    - path: data/raw_data/energydata_complete.csv
+    - path: data/raw_data/household_power_consumption.txt
       hash: md5
-      md5: 69ef922b5fcafcd49097cfc09e07167e
-      size: 11979363
-      isexec: true
-    - path: src/data_preprocessing.py
+      md5: e05286cd4a257d80c3f0407b350df7dd
+      size: 132960755
+    - path: src/data_processing.py
       hash: md5
-      md5: 5b4f46e5cb8ac92fbb2047a4cacc3989
-      size: 5128
+      md5: ef4fe44fc99de98293c34defe2d88184
+      size: 3389
     outs:
-    - path: data/lstm_data
+    - path: data/processed/test.csv
       hash: md5
-      md5: 8acb20ac0f7542c092e8f89d79b81079.dir
-      size: 1259634463
-      nfiles: 7
-    - path: data/xgb_data
+      md5: 15bd6990d1719800dbe5912dc3f5c90a
+      size: 1041622
+    - path: data/processed/train.csv
       hash: md5
-      md5: 0ac3e4459a489bb145b7537b4ecc8c0a.dir
-      size: 12211861
-      nfiles: 6
+      md5: cbe3d6bff296b67cddc06fc205c34b0f
+      size: 3448942
+  train:
+    cmd: python src/train.py
+    deps:
+    - path: data/processed/train.csv
+      hash: md5
+      md5: cbe3d6bff296b67cddc06fc205c34b0f
+      size: 3448942
+    - path: params.yaml
+      hash: md5
+      md5: 0ab51135301d0b5ba8820193cf76f63e
+      size: 209
+    - path: src/train.py
+      hash: md5
+      md5: 8444547d9390be44ffbad37d2726f23a
+      size: 8987
+    params:
+      params.yaml:
+        features:
+          lag_start: 1
+          lag_end: 24
+        model:
+          n_estimators: 1500
+          max_depth: 2
+          learning_rate: 0.01
+          subsample: 0.8
+          colsample_bytree: 0.8
+          min_child_weight: 1
+          gamma: 0
+          reg_alpha: 0
+          reg_lambda: 1
+    outs:
+    - path: model/metrics.json
+      hash: md5
+      md5: 92e0d74613af482a4e4c1aaa20f7136e
+      size: 268
+    - path: model/xgb_model.pkl
+      hash: md5
+      md5: ba11ca534199c902916f47bf782f77e1
+      size: 1350536
