@@ -29,7 +29,7 @@ stages:
       size: 3448942
     - path: params.yaml
       hash: md5
-      md5: 0ab51135301d0b5ba8820193cf76f63e
+      md5: 15937cce2ed29ca71f24614cccc518e5
       size: 209
     - path: src/train.py
       hash: md5
@@ -42,8 +42,8 @@ stages:
           lag_end: 24
         model:
           n_estimators: 1500
-          max_depth: 2
-          learning_rate: 0.01
+          max_depth: 8
+          learning_rate: 0.02
           subsample: 0.8
           colsample_bytree: 0.8
           min_child_weight: 1
@@ -53,9 +53,9 @@ stages:
     outs:
     - path: model/metrics.json
       hash: md5
-      md5: 92e0d74613af482a4e4c1aaa20f7136e
-      size: 268
+      md5: 1844925fe4da14d6efcc40f1666ddb0a
+      size: 270
     - path: model/xgb_model.pkl
       hash: md5
-      md5: ba11ca534199c902916f47bf782f77e1
-      size: 1350536
+      md5: 1fa79a253c2a148cbc0d1b033fe78a76
+      size: 20192254
