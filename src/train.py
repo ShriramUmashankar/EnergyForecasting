@@ -17,6 +17,8 @@ from sklearn.metrics import mean_absolute_error, mean_squared_error, r2_score
 # ==========================================================
 
 TRAIN_PATH = "data/processed/train.csv"
+# Load Airflow's Live Data
+LIVE_PATH = "data/processed/live_data.csv"
 PARAMS_PATH = "params.yaml"
 
 MODEL_DIR = "model"
@@ -32,7 +34,7 @@ os.makedirs(MODEL_DIR, exist_ok=True)
 # MLflow CONFIG
 # ==========================================================
 
-mlflow.set_tracking_uri("http://localhost:5000")
+mlflow.set_tracking_uri("http://mlflow:5000")
 mlflow.set_experiment("Energy_XGBoost")
 
 # ==========================================================
@@ -51,8 +53,15 @@ LAG_END = feat_cfg["lag_end"]
 # ==========================================================
 # LOAD DATA
 # ==========================================================
-
 train = pd.read_csv(TRAIN_PATH, parse_dates=["timestamp"])
+
+if os.path.exists(LIVE_PATH) and os.path.getsize(LIVE_PATH) > 0:
+    df_live = pd.read_csv(LIVE_PATH, parse_dates=["timestamp"])
+    train = pd.concat([train, df_live], ignore_index=True)
+    print(f"Training on combined data: {len(train)} rows")
+else:
+    print(f"Training on base data: {len(train)} rows")
+
 
 # ==========================================================
 # FEATURE ENGINEERING

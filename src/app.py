@@ -30,7 +30,7 @@ class PredictRequest(BaseModel):
 # CONFIG
 # ======================================================
 
-mlflow.set_tracking_uri("http://localhost:5000")
+mlflow.set_tracking_uri("http://mlflow:5000")
 
 MODEL_URI = "models:/EnergyForecastModel/Production"
 TRAIN_PATH = "data/processed/train.csv"
@@ -367,7 +367,16 @@ def plot_live():
 
     return fig.to_html(full_html=True)
 
-
+@app.post("/reload")
+def reload_system():
+    try:
+        # Re-fetch the latest model from MLflow
+        load_model()
+        # Re-read the CSV files from the mounted volume
+        bootstrap_history()
+        return {"message": "Success: Backend reloaded with latest model and data."}
+    except Exception as e:
+        return {"error": str(e)}
 # ======================================================
 # STARTUP
 # ======================================================

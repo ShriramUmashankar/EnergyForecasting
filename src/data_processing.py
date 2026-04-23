@@ -1,29 +1,3 @@
-# data_processing.py
-# ==========================================================
-# Energy Forecasting - Data Processing Pipeline
-#
-# Reads raw household power consumption data from:
-#   data/raw_data/
-#
-# Produces:
-#   data/processed/train.csv
-#   data/processed/test.csv
-#
-# Design Goals:
-# - Preserve same schema in train/test for live row transfer
-# - Hourly aggregated data
-# - Chronological split
-# - Test set simulates incoming live stream
-# - Adds shifted target for evaluation:
-#       target_next_hour = next hour Global_active_power
-#
-# So at time t:
-#   features row uses current known values
-#   target_next_hour = actual at t+1
-#
-# Later when row is consumed from test -> append to train.
-# ==========================================================
-
 import os
 import pandas as pd
 import numpy as np
@@ -37,12 +11,10 @@ OUT_DIR = "data/processed"
 
 TRAIN_PATH = os.path.join(OUT_DIR, "train.csv")
 TEST_PATH = os.path.join(OUT_DIR, "test.csv")
+LIVE_PATH = os.path.join(OUT_DIR, "live_data.csv")
 
 TRAIN_END_YEAR = 2009   # train until end 2009
 TEST_START_YEAR = 2010  # test from 2010 onward
-
-os.makedirs(OUT_DIR, exist_ok=True)
-
 
 def load_raw_data(path):
     print(f"Loading raw file: {path}")
@@ -98,12 +70,18 @@ def split_train_test(df):
 
 
 def save_files(train, test):
+    # 1. Save the full train and test datasets
     train.to_csv(TRAIN_PATH, index=True)
     test.to_csv(TEST_PATH, index=True)
 
+    # 2. Slice 0 rows from train to get just the headers (and the index)
+    empty_live = train.iloc[0:0]
+    empty_live.to_csv(LIVE_PATH, index=True)
+
     print("\nSaved files:")
-    print(TRAIN_PATH, train.shape)
-    print(TEST_PATH, test.shape)
+    print(f"{TRAIN_PATH} : {train.shape}")
+    print(f"{TEST_PATH}  : {test.shape}")
+    print(f"{LIVE_PATH}  : {empty_live.shape} (Headers only)")
 
 
 # ==========================================================
@@ -117,10 +95,10 @@ def main():
 
     print("Raw shape:", df.shape)
 
+    os.makedirs(OUT_DIR, exist_ok=True)
+
     df = resample_hourly(df)
-
     print("Hourly shape:", df.shape)
-
     df = add_target(df)
 
     print("After target shift:", df.shape)

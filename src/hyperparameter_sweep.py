@@ -3,9 +3,9 @@
 import itertools
 import subprocess
 
-n_estimators_list = [100, 300, 500, 700, 900, 1100, 1300, 1500]
-max_depth_list = [2, 3, 4, 5, 6, 7, 8]
-learning_rate_list = [0.001, 0.005, 0.01, 0.05, 0.1, 0.5]
+n_estimators_list = [100, 1500]
+max_depth_list = [2,  8]
+learning_rate_list = [0.02]
 
 grid = list(itertools.product(
     n_estimators_list,

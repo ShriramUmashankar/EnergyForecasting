@@ -7,8 +7,15 @@ from mlflow.tracking import MlflowClient
 
 MODEL_NAME = "EnergyForecastModel"
 
-mlflow.set_tracking_uri("http://localhost:5000")
+mlflow.set_tracking_uri("http://mlflow:5000")
 client = MlflowClient()
+
+with open("data/processed/live_data.csv.dvc", "r") as f:
+    import yaml
+    dvc_meta = yaml.safe_load(f)
+    CURRENT_DATA_HASH = dvc_meta['outs'][0]['md5']
+
+print(f"Filtering for experiments matching data hash: {CURRENT_DATA_HASH}")
 
 # ==========================================================
 # STEP 1: Fetch DVC experiments in CSV format
@@ -38,7 +45,12 @@ for row in reader:
     # Skip the workspace (we can't 'dvc exp apply' the workspace to itself)
     if exp_name == "workspace" or rev == "workspace":
         continue
-
+    # --- THE HASH FILTER ---
+    # DVC CSV output usually names the column by the file path
+    # We check if the hash in the table matches our CURRENT workspace hash
+    row_hash = row.get("data/processed/live_data.csv")
+    if row_hash != CURRENT_DATA_HASH:
+        continue
     # Search the row keys for our target metric. 
     # Depending on the DVC version, the column header might be 'val.rmse' 
     # or 'model/metrics.json:val.rmse'. This safely catches both.
