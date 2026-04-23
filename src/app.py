@@ -2,7 +2,7 @@
 
 import io
 from collections import deque
-
+import os
 import numpy as np
 import pandas as pd
 import plotly.graph_objects as go
@@ -34,6 +34,7 @@ mlflow.set_tracking_uri("http://localhost:5000")
 
 MODEL_URI = "models:/EnergyForecastModel/Production"
 TRAIN_PATH = "data/processed/train.csv"
+LIVE_PATH = "data/processed/live_data.csv"
 TARGET_COL = "Global_active_power"
 
 RAW_FEATURES = [
@@ -87,13 +88,18 @@ def load_model():
 
 
 def bootstrap_history():
-    df = pd.read_csv(TRAIN_PATH)
-    vals = df[TARGET_COL].tail(24).tolist()
-
+    df_train = pd.read_csv(TRAIN_PATH)
+    
+    if os.path.exists(LIVE_PATH) and os.path.getsize(LIVE_PATH) > 0:
+        df_live = pd.read_csv(LIVE_PATH)
+        df_combined = pd.concat([df_train, df_live], ignore_index=True)
+    else:
+        df_combined = df_train
+    vals = df_combined[TARGET_COL].tail(24).tolist()
+    
     for v in vals:
         history_buffer.append(float(v))
-
-
+        
 # ======================================================
 # FEATURES
 # ======================================================
