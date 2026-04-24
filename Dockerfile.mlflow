@@ -1,0 +1,4 @@
+FROM python:3.10-slim
+RUN pip install --no-cache-dir mlflow psycopg2-binary
+EXPOSE 5000
+# The command is now handled by the image, not the runtime bash script

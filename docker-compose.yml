@@ -1,0 +1,94 @@
+# ==========================================
+# 1. SHARED VOLUMES 
+# ==========================================
+volumes:
+  postgres-data:      # Persistent storage for the database
+
+# ==========================================
+# 2. THE SERVICES 
+# ==========================================
+services:
+  # --- THE DATABASE ---
+  postgres:
+    image: postgres:13
+    environment:
+      - POSTGRES_USER=mlops
+      - POSTGRES_PASSWORD=mlops
+    volumes:
+      - postgres-data:/var/lib/postgresql/data
+      - ./init.sql:/docker-entrypoint-initdb.d/init.sql
+    ports:
+      - "5432:5432"
+
+# --- MLFLOW TRACKING SERVER ---
+  mlflow:
+    build:
+      context: .
+      dockerfile: Dockerfile.mlflow
+    user: "${HOST_UID:-1000}:0" 
+    command: [
+      "mlflow", "server",
+      "--host", "0.0.0.0",
+      "--port", "5000",
+      "--backend-store-uri", "postgresql://mlops:mlops@postgres:5432/mlflow",
+      "--default-artifact-root", "/mlartifacts",
+      "--allowed-hosts", "*",
+      "--cors-allowed-origins", "*"
+    ]
+    ports:
+      - "5000:5000"
+    volumes:
+      - ./mlartifacts:/mlartifacts
+    depends_on:
+      - postgres
+
+  # --- AIRFLOW ---
+  airflow:
+    build:
+      context: .
+      dockerfile: Dockerfile.airflow
+    user: "${HOST_UID:-1000}:0" 
+    environment:
+      - AIRFLOW__CORE__EXECUTOR=LocalExecutor
+      - AIRFLOW__DATABASE__SQL_ALCHEMY_CONN=postgresql+psycopg2://mlops:mlops@postgres:5432/airflow
+      - AIRFLOW__CORE__LOAD_EXAMPLES=False
+      - AIRFLOW__CORE__DAGS_FOLDER=/opt/airflow/project/dags
+      - AIRFLOW__CORE__FERNET_KEY=${AIRFLOW__CORE__FERNET_KEY}
+    volumes:
+      - ./:/opt/airflow/project
+      - ./mlartifacts:/mlartifacts
+    ports:
+      - "8080:8080"
+    command: >
+      bash -c "airflow db migrate && 
+      (while [ ! -f /opt/airflow/simple_auth_manager_passwords.json.generated ]; do sleep 2; done; cp /opt/airflow/simple_auth_manager_passwords.json.generated /opt/airflow/project/airflow_credentials.json) & 
+      airflow standalone"
+    depends_on:
+      - postgres
+
+  # --- FASTAPI BACKEND ---
+  fastapi-backend:
+    build: 
+      context: .
+      dockerfile: Dockerfile.backend
+    ports:
+      - "8000:8000"
+    environment:
+      - MLFLOW_TRACKING_URI=http://mlflow:5000 
+    volumes:
+      - ./data:/app/data
+      - ./mlartifacts:/mlartifacts 
+    depends_on:
+      - mlflow
+
+  # --- STREAMLIT FRONTEND ---
+  streamlit-frontend:
+    build: 
+      context: .
+      dockerfile: Dockerfile.frontend
+    ports:
+      - "8501:8501"
+    environment:
+      - API_URL=http://fastapi-backend:8000
+    depends_on:
+      - fastapi-backend

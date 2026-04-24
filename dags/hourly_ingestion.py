@@ -15,8 +15,8 @@ API_PREDICT_URL = "http://fastapi-backend:8000/predict"
 API_METRICS_URL = "http://fastapi-backend:8000/metrics"
 
 # Set threshold to 4 for your testing
-RMSE_THRESHOLD = 0.5  
-ROW_DELTA_THRESHOLD = 168  
+RMSE_THRESHOLD = 0.5
+ROW_DELTA_THRESHOLD = 3
 
 default_args = {
     'owner': 'admin',
@@ -61,8 +61,8 @@ def check_retrain_conditions(**kwargs):
     with open(train_path, 'r') as f:
         current_count = sum(1 for row in f) - 1 
 
-    last_count = int(Variable.get("last_trained_row_count", default=current_count))
-    action = Variable.get("retrain_action", default="ready").lower()
+    last_count = int(Variable.get("last_trained_row_count", default_var=current_count))
+    action = Variable.get("retrain_action", default_var="ready").strip().lower()
 
     try:
         res = requests.get(API_METRICS_URL).json()

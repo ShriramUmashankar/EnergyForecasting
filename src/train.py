@@ -57,10 +57,15 @@ train = pd.read_csv(TRAIN_PATH, parse_dates=["timestamp"])
 
 if os.path.exists(LIVE_PATH) and os.path.getsize(LIVE_PATH) > 0:
     df_live = pd.read_csv(LIVE_PATH, parse_dates=["timestamp"])
-    train = pd.concat([train, df_live], ignore_index=True)
-    print(f"Training on combined data: {len(train)} rows")
+
+    if not df_live.empty:
+        train = pd.concat([train, df_live], ignore_index=True)
+        print(f"Training on combined data: {len(train)} rows "
+              f"(base + {len(df_live)} live rows)")
+    else:
+        print(f"Training on base data: {len(train)} rows (live file is empty)")
 else:
-    print(f"Training on base data: {len(train)} rows")
+    print(f"Training on base data: {len(train)} rows (no live file found)")
 
 
 # ==========================================================
@@ -126,7 +131,7 @@ model = xgb.XGBRegressor(
     reg_lambda=model_cfg["reg_lambda"],
     objective="reg:squarederror",
     random_state=RANDOM_STATE,
-    n_jobs=-1
+    n_jobs= 6
 )
 
 # ==========================================================

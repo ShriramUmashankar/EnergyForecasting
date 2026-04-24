@@ -3,3 +3,4 @@ outs:
   size: 132960755
   hash: md5
   path: household_power_consumption.txt
+  isexec: true

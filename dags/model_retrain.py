@@ -19,19 +19,24 @@ default_args = {
 }
 
 MAIN_FOLDER_TRAIN_SCRIPT = f"""
+set -e # This tells bash to stop immediately if any command fails
 cd {PROJECT_ROOT}
+
+echo "setting git config mail"
+git config --global user.email 'mlops-bot@example.com'
+git config --global user.name 'MLOps Bot'
 
 echo "Updating DVC hashes for current data state..."
 dvc add data/processed/live_data.csv data/processed/test.csv
 
 echo "Stage the .dvc files so the Hash Filter can read the new MD5..."
-git add data/processed/live_data.csv.dvc data/processed/test.csv.dvc
+git add data/processed/live_data.csv.dvc data/processed/test.csv.dvc    
 
 echo " Running Hyperparameter Sweep..."
+export MLFLOW_TRACKING_URI=http://mlflow:5000
 python3 -u src/hyperparameter_sweep.py
 
 echo " Promoting Best Model..."
-# This uses the Hash Filter logic we built
 python3 -u src/register_model.py
 """
 
@@ -42,7 +47,7 @@ def ping_backend():
     print("Backend reloaded successfully!")
  
 def await_human_approval():
-    action = Variable.get("retrain_action", default_var="ready").lower()
+    action = Variable.get("retrain_action", default_var="ready").strip().lower()
     
     if action == "approved":
         return True  # Sensor succeeds, moves to next task

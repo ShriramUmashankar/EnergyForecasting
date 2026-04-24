@@ -1,0 +1,15 @@
+fastapi
+uvicorn
+python-multipart
+pydantic
+pandas
+numpy
+plotly
+requests
+streamlit
+mlflow
+xgboost
+scikit-learn
+pyyaml
+dvc
+urllib3<2.0.0

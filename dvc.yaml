@@ -5,19 +5,18 @@ stages:
     - data/raw_data/household_power_consumption.txt
     - src/data_processing.py
     outs:
-    - data/processed/test.csv
     - data/processed/train.csv
-
+    
   train:
     cmd: python src/train.py
     deps:
-      - src/train.py
-      - data/processed/train.csv
-      - params.yaml
+    - data/processed/live_data.csv
+    - data/processed/train.csv
+    - src/train.py
     params:
-      - model
-      - features
+    - features
+    - model
     outs:
-      - model/xgb_model.pkl
+    - model/xgb_model.pkl
     metrics:
-      - model/metrics.json
+    - model/metrics.json
