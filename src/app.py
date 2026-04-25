@@ -1,6 +1,7 @@
 # app.py
 
 import io
+import time
 from collections import deque
 import os
 import numpy as np
@@ -15,6 +16,9 @@ import uvicorn
 import mlflow
 import mlflow.pyfunc
 from pydantic import BaseModel
+
+from prometheus_fastapi_instrumentator import Instrumentator
+from prometheus_client import Gauge, Counter, Histogram
 
 class PredictRequest(BaseModel):
     timestamp: str
@@ -47,12 +51,21 @@ RAW_FEATURES = [
     "Sub_metering_3"
 ]
 
-
 # ======================================================
-# APP
+# APP & PROMETHEUS SETUP
 # ======================================================
 
 app = FastAPI(title="Energy Forecast API")
+
+# Prometheus Metrics Definitions
+PROMETHEUS_RMSE = Gauge("model_rmse", "Root Mean Square Error of the model")
+PROMETHEUS_MAE = Gauge("model_mae", "Mean Absolute Error of the model")
+PROMETHEUS_PREDS = Counter("model_predictions_total", "Total predictions made")
+PROMETHEUS_INFERENCE_TIME = Histogram("model_inference_time_seconds", "Time taken for a single next-hour prediction")
+PROMETHEUS_FORECAST_TIME = Histogram("model_forecast_time_seconds", "Time taken for the 168-hour recursive forecast")
+
+# Automatically exposes /metrics endpoint and tracks API latency/throughput
+Instrumentator().instrument(app).expose(app)
 
 app.add_middleware(
     CORSMiddleware,
@@ -77,7 +90,6 @@ forecast_cache = {
     "values": []
 }
 
-
 # ======================================================
 # LOADERS
 # ======================================================
@@ -85,7 +97,8 @@ forecast_cache = {
 def load_model():
     global model
     model = mlflow.pyfunc.load_model(MODEL_URI)
-
+    run_id = model.metadata.run_id if hasattr(model, 'metadata') else "Unknown"
+    print(f"✅ Model loaded successfully! (Run ID: {run_id})")
 
 def bootstrap_history():
     df_train = pd.read_csv(TRAIN_PATH)
@@ -99,6 +112,13 @@ def bootstrap_history():
     
     for v in vals:
         history_buffer.append(float(v))
+
+    # Grab the very last row to print the most recent state
+    last_row = df_combined.iloc[-1]
+    last_time = last_row.get("timestamp", "Unknown timestamp")
+    last_val = last_row.get(TARGET_COL, "Unknown value")
+    
+    print(f"✅ Bootstrapping complete! Most recent historical point -> Time: {last_time} | {TARGET_COL}: {last_val}")    
         
 # ======================================================
 # FEATURES
@@ -106,7 +126,6 @@ def bootstrap_history():
 
 def build_feature_row(row):
     ts = pd.to_datetime(row["timestamp"])
-
     feat = {}
 
     for c in RAW_FEATURES:
@@ -118,28 +137,24 @@ def build_feature_row(row):
     feat["month"] = ts.month
 
     hist = list(history_buffer)
-
     for i in range(1, 25):
         feat[f"lag_{i}"] = float(hist[-i])
 
     return pd.DataFrame([feat])
-
 
 # ======================================================
 # FORECAST
 # ======================================================
 
 def recursive_168_forecast(row):
-
+    start_time = time.time()
+    
     local_hist = deque(list(history_buffer), maxlen=24)
     ts = pd.to_datetime(row["timestamp"])
-
     preds = []
 
     for step in range(168):
-
         future_ts = ts + pd.Timedelta(hours=step + 1)
-
         feat = {}
 
         for c in RAW_FEATURES:
@@ -154,7 +169,6 @@ def recursive_168_forecast(row):
             feat[f"lag_{i}"] = float(local_hist[-i])
 
         X = pd.DataFrame([feat])
-
         pred = float(model.predict(X)[0])
 
         preds.append(pred)
@@ -166,25 +180,19 @@ def recursive_168_forecast(row):
         freq="h"
     )
 
+    PROMETHEUS_FORECAST_TIME.observe(time.time() - start_time)
+    
     return pd.Series(preds, index=idx)
-
 
 # ======================================================
 # METRICS
 # ======================================================
-def update_metrics(actual, ts):
-    """
-    When actual at time ts arrives:
-    find earlier prediction made for ts,
-    fill actual value,
-    compute running RMSE / MAE.
-    """
 
+def update_metrics(actual, ts):
     global error_count, sse, sae
 
     rmse = 0.0
     mae = 0.0
-
     matched_pred = None
 
     for item in live_points:
@@ -194,9 +202,7 @@ def update_metrics(actual, ts):
             break
 
     if matched_pred is not None:
-
         err = matched_pred - actual
-
         error_count += 1
         sse += err ** 2
         sae += abs(err)
@@ -206,7 +212,6 @@ def update_metrics(actual, ts):
 
     return rmse, mae
 
-
 # ======================================================
 # ENDPOINTS
 # ======================================================
@@ -215,9 +220,8 @@ def update_metrics(actual, ts):
 def health():
     return {"status": "up"}
 
-
-@app.get("/metrics")
-def metrics():
+@app.get("/stats")
+def stats():
     rmse = np.sqrt(sse / error_count) if error_count else 0
     mae = sae / error_count if error_count else 0
 
@@ -230,10 +234,8 @@ def metrics():
         "forecast_168h": forecast_cache
     }
 
-
 @app.post("/upload")
 async def upload(file: UploadFile = File(...)):
-
     content = await file.read()
     df = pd.read_csv(io.BytesIO(content))
 
@@ -250,7 +252,6 @@ async def upload(file: UploadFile = File(...)):
         last_row = r.to_dict()
 
     old_hist = deque(history_buffer, maxlen=24)
-
     history_buffer.clear()
     for x in local_hist:
         history_buffer.append(x)
@@ -269,22 +270,23 @@ async def upload(file: UploadFile = File(...)):
         "plot_url": "/plot/week-forecast"
     }
 
-
 @app.post("/predict")
 async def predict(payload: PredictRequest):
-
     row = payload.dict()
-
     ts = pd.to_datetime(row["timestamp"])
     actual = float(row["Global_active_power"])
 
-    # Evaluate previous prediction now that actual arrived
     rmse, mae = update_metrics(actual, ts)
 
-    # Predict next hour
+    PROMETHEUS_RMSE.set(rmse)
+    PROMETHEUS_MAE.set(mae)
+    PROMETHEUS_PREDS.inc()
+
     X = build_feature_row(row)
 
+    start_time = time.time()
     pred_next = float(model.predict(X)[0])
+    PROMETHEUS_INFERENCE_TIME.observe(time.time() - start_time)
 
     future_ts = ts + pd.Timedelta(hours=1)
 
@@ -294,10 +296,8 @@ async def predict(payload: PredictRequest):
         "actual": None
     })
 
-    # Update rolling history
     history_buffer.append(actual)
 
-    # Fresh 168h forecast
     fc = recursive_168_forecast(row)
 
     forecast_cache["timestamps"] = [str(x) for x in fc.index]
@@ -313,10 +313,8 @@ async def predict(payload: PredictRequest):
         "forecast_plot_url": "/plot/week-forecast"
     }
 
-
 @app.get("/plot/week-forecast", response_class=HTMLResponse)
 def plot_upload():
-
     fig = go.Figure()
 
     fig.add_trace(go.Scatter(
@@ -334,10 +332,8 @@ def plot_upload():
 
     return fig.to_html(full_html=True)
 
-
 @app.get("/plot/live", response_class=HTMLResponse)
 def plot_live():
-
     if len(live_points) == 0:
         return "<h2>No prediction data yet</h2>"
 
@@ -370,13 +366,12 @@ def plot_live():
 @app.post("/reload")
 def reload_system():
     try:
-        # Re-fetch the latest model from MLflow
         load_model()
-        # Re-read the CSV files from the mounted volume
         bootstrap_history()
         return {"message": "Success: Backend reloaded with latest model and data."}
     except Exception as e:
         return {"error": str(e)}
+
 # ======================================================
 # STARTUP
 # ======================================================
@@ -386,6 +381,5 @@ def startup():
     load_model()
     bootstrap_history()
 
-
 if __name__ == "__main__":
-    uvicorn.run(app, host="0.0.0.0", port=8000)
+    uvicorn.run(app, host="0.0.0.0", port=8000) 

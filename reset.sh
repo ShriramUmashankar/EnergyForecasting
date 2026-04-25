@@ -15,7 +15,8 @@ rm -rf .dvc/tmp
 rm -f dvc.lock
 
 echo " Deleting airflow related files"
-rm -rf .env
+rm -f .env
+rm -f airflow_credentials.json
 
 
 echo " Deleting MLflow artifacts..."

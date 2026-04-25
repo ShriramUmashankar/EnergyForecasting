@@ -21,7 +21,7 @@ st.set_page_config(
 # ==========================================
 def fetch_metrics():
     try:
-        response = requests.get(f"{API_URL}/metrics")
+        response = requests.get(f"{API_URL}/stats")
         if response.status_code == 200:
             return response.json()
     except requests.exceptions.ConnectionError:

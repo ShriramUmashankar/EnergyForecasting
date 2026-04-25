@@ -1,0 +1,11 @@
+groups:
+  - name: ai_rules
+    rules:
+      # Resource Overuse: CPU > 80% (calculated across all cores)
+      - alert: HighCpuUsage
+        expr: 100 - (avg by (instance) (rate(node_cpu_seconds_total{mode="idle"}[30s])) * 100) > 80
+        for: 10s
+        labels:
+          severity: critical
+        annotations:
+          summary: "CPU Usage is extremely high ({{ $value }}%)"
