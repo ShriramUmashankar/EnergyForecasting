@@ -12,11 +12,11 @@ from airflow.models import Variable  # Airflow 3 SDK for task-safe variables
 
 PROJECT_ROOT = "/opt/airflow/project"
 API_PREDICT_URL = "http://fastapi-backend:8000/predict"
-API_METRICS_URL = "http://fastapi-backend:8000/metrics"
+API_METRICS_URL = "http://fastapi-backend:8000/stats"
 
 # Set threshold to 4 for your testing
 RMSE_THRESHOLD = 0.5
-ROW_DELTA_THRESHOLD = 3
+ROW_DELTA_THRESHOLD = 168
 
 default_args = {
     'owner': 'admin',
