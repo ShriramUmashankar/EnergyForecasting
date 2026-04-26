@@ -1,7 +1,7 @@
 groups:
   - name: ai_rules
     rules:
-      # Resource Overuse: CPU > 80% (calculated across all cores)
+      # 1. Resource Overuse: CPU > 80%
       - alert: HighCpuUsage
         expr: 100 - (avg by (instance) (rate(node_cpu_seconds_total{mode="idle"}[30s])) * 100) > 80
         for: 10s
@@ -9,3 +9,23 @@ groups:
           severity: critical
         annotations:
           summary: "CPU Usage is extremely high ({{ $value }}%)"
+
+      # 2. Service Down: Send mail if FastAPI Backend is unreachable
+      - alert: BackendServiceDown
+        expr: up{job="fastapi-backend"} == 0
+        for: 30s
+        labels:
+          severity: critical
+        annotations:
+          summary: "CRITICAL: FastAPI Backend is DOWN"
+          description: "Prometheus has lost connection to the FastAPI container for more than 30 seconds."
+
+      # 3. Model Performance: RMSE Drift
+      - alert: ModelPerformanceDegraded
+        expr: model_rmse > 0.5
+        for: 1m
+        labels:
+          severity: warning
+        annotations:
+          summary: "Model RMSE is too high ({{ $value }})"
+          description: "The registered model RMSE has crossed the 0.5 threshold, indicating potential data drift or poor training."
