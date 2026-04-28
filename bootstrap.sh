@@ -24,7 +24,7 @@ fi
 echo "Starting Energy Forecasting MLOps Setup..."
 
 # 1. Create the necessary folders safely
-echo "📁 Ensuring volume directories exist..."
+echo "Ensuring volume directories exist..."
 mkdir -p mlartifacts
 mkdir -p data/processed
 mkdir -p model
