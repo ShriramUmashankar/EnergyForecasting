@@ -2,9 +2,7 @@ import os
 import pandas as pd
 import numpy as np
 
-# ==========================================================
-# CONFIG
-# ==========================================================
+# Config
 
 RAW_DIR = "data/raw_data"
 OUT_DIR = "data/processed"
@@ -70,11 +68,11 @@ def split_train_test(df):
 
 
 def save_files(train, test):
-    # 1. Save the full train and test datasets
+    #  Save the full train and test datasets
     train.to_csv(TRAIN_PATH, index=True)
     test.to_csv(TEST_PATH, index=True)
 
-    # 2. Slice 0 rows from train to get just the headers (and the index)
+    #  Slice 0 rows from train to get just the headers (and the index)
     empty_live = train.iloc[0:0]
     empty_live.to_csv(LIVE_PATH, index=True)
 
@@ -84,9 +82,6 @@ def save_files(train, test):
     print(f"{LIVE_PATH}  : {empty_live.shape} (Headers only)")
 
 
-# ==========================================================
-# MAIN
-# ==========================================================
 
 def main():
     raw_file ='data/raw_data/household_power_consumption.txt'

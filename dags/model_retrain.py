@@ -1,7 +1,4 @@
 from airflow import DAG
-
-
-# AIRFLOW 3.0 UPDATED IMPORTS
 from airflow.providers.standard.operators.bash import BashOperator
 from airflow.providers.standard.operators.python import PythonOperator
 from airflow.providers.standard.sensors.python import PythonSensor
@@ -41,7 +38,7 @@ python3 -u src/register_model.py
 """
 
 def ping_backend():
-    # Since they are in the same docker-compose network, Airflow can just call it by name!
+
     response = requests.post("http://fastapi-backend:8000/reload")
     response.raise_for_status()
     print("Backend reloaded successfully!")
@@ -70,7 +67,6 @@ with DAG(
     catchup=False
 ) as dag:
 
-    # 1. UI-Based Human Sensor
     wait_for_human = PythonSensor(
         task_id='wait_for_human_approval',
         python_callable=await_human_approval,
@@ -79,13 +75,13 @@ with DAG(
         mode='reschedule' 
     )
 
-    # 2. Reset the Variable immediately upon approval
+    # Reset the Variable immediately upon approval
     reset_state = PythonOperator(
         task_id='reset_state_to_ready',
         python_callable=reset_approval_state
     )
 
-    # 3. Isolated Training Pipeline
+    # Isolated Training Pipeline
     run_isolated_pipeline = BashOperator(
         task_id='run_dvc_pipeline_and_promote',
         bash_command=MAIN_FOLDER_TRAIN_SCRIPT

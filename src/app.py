@@ -1,5 +1,3 @@
-# app.py
-
 import io
 import time
 from collections import deque
@@ -51,9 +49,6 @@ RAW_FEATURES = [
     "Sub_metering_3"
 ]
 
-# ======================================================
-# APP & PROMETHEUS SETUP
-# ======================================================
 
 app = FastAPI(title="Energy Forecast API")
 
@@ -90,15 +85,13 @@ forecast_cache = {
     "values": []
 }
 
-# ======================================================
-# LOADERS
-# ======================================================
+
 
 def load_model():
     global model
     model = mlflow.pyfunc.load_model(MODEL_URI)
     run_id = model.metadata.run_id if hasattr(model, 'metadata') else "Unknown"
-    print(f"✅ Model loaded successfully! (Run ID: {run_id})")
+    print(f" Model loaded successfully! (Run ID: {run_id})")
 
 def bootstrap_history():
     df_train = pd.read_csv(TRAIN_PATH)
@@ -118,11 +111,9 @@ def bootstrap_history():
     last_time = last_row.get("timestamp", "Unknown timestamp")
     last_val = last_row.get(TARGET_COL, "Unknown value")
     
-    print(f"✅ Bootstrapping complete! Most recent historical point -> Time: {last_time} | {TARGET_COL}: {last_val}")    
+    print(f" Bootstrapping complete! Most recent historical point -> Time: {last_time} | {TARGET_COL}: {last_val}")    
         
-# ======================================================
-# FEATURES
-# ======================================================
+# Features
 
 def build_feature_row(row):
     ts = pd.to_datetime(row["timestamp"])
@@ -142,9 +133,7 @@ def build_feature_row(row):
 
     return pd.DataFrame([feat])
 
-# ======================================================
 # FORECAST
-# ======================================================
 
 def recursive_168_forecast(row):
     start_time = time.time()
@@ -184,9 +173,7 @@ def recursive_168_forecast(row):
     
     return pd.Series(preds, index=idx)
 
-# ======================================================
 # METRICS
-# ======================================================
 
 def update_metrics(actual, ts):
     global error_count, sse, sae
@@ -212,9 +199,7 @@ def update_metrics(actual, ts):
 
     return rmse, mae
 
-# ======================================================
 # ENDPOINTS
-# ======================================================
 
 @app.get("/health")
 def health():
@@ -372,9 +357,7 @@ def reload_system():
     except Exception as e:
         return {"error": str(e)}
 
-# ======================================================
 # STARTUP
-# ======================================================
 
 @app.on_event("startup")
 def startup():

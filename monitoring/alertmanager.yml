@@ -1,8 +1,8 @@
 global:
   smtp_smarthost: 'sandbox.smtp.mailtrap.io:2525'
   smtp_from: 'alertmanager@appmonitoring.com'
-  smtp_auth_username: 'USERNAME'
-  smtp_auth_password: 'PASSWD'
+  smtp_auth_username: 'username'
+  smtp_auth_password: 'password'
   smtp_require_tls: true
 
 route:

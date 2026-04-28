@@ -12,9 +12,6 @@ import mlflow.xgboost
 
 from sklearn.metrics import mean_absolute_error, mean_squared_error, r2_score
 
-# ==========================================================
-# FIXED PATHS
-# ==========================================================
 
 TRAIN_PATH = "data/processed/train.csv"
 # Load Airflow's Live Data
@@ -30,16 +27,13 @@ RANDOM_STATE = 42
 
 os.makedirs(MODEL_DIR, exist_ok=True)
 
-# ==========================================================
 # MLflow CONFIG
-# ==========================================================
+
 
 mlflow.set_tracking_uri("http://mlflow:5000")
 mlflow.set_experiment("Energy_XGBoost")
 
-# ==========================================================
 # LOAD CONFIG
-# ==========================================================
 
 with open(PARAMS_PATH, "r") as f:
     config = yaml.safe_load(f)
@@ -50,9 +44,8 @@ feat_cfg = config["features"]
 LAG_START = feat_cfg["lag_start"]
 LAG_END = feat_cfg["lag_end"]
 
-# ==========================================================
 # LOAD DATA
-# ==========================================================
+
 train = pd.read_csv(TRAIN_PATH, parse_dates=["timestamp"])
 
 if os.path.exists(LIVE_PATH) and os.path.getsize(LIVE_PATH) > 0:
@@ -67,10 +60,7 @@ if os.path.exists(LIVE_PATH) and os.path.getsize(LIVE_PATH) > 0:
 else:
     print(f"Training on base data: {len(train)} rows (no live file found)")
 
-
-# ==========================================================
 # FEATURE ENGINEERING
-# ==========================================================
 
 def create_features(df):
     df = df.copy()
@@ -88,12 +78,6 @@ def create_features(df):
 train = create_features(train)
 
 train.dropna(inplace=True)
-
-
-# ==========================================================
-# SPLIT TRAIN -> TRAIN / VAL
-# last month of training becomes validation
-# ==========================================================
 
 val_start_ts = train["timestamp"].max() - pd.DateOffset(months=1)
 
@@ -115,9 +99,6 @@ print("Val shape  :", X_val.shape)
 
 feature_cols = X_train.columns.tolist()
 
-# ==========================================================
-# MODEL
-# ==========================================================
 
 model = xgb.XGBRegressor(
     n_estimators=model_cfg["n_estimators"],
@@ -134,9 +115,6 @@ model = xgb.XGBRegressor(
     n_jobs= 6
 )
 
-# ==========================================================
-# TRAIN + LOG TO MLFLOW
-# ==========================================================
 
 with mlflow.start_run() as run:
 
@@ -162,16 +140,8 @@ with mlflow.start_run() as run:
     # also log model to MLflow
     mlflow.xgboost.log_model(model, name="xgb_model")
 
-    # ======================================================
-    # PREDICTIONS
-    # ======================================================
-
     train_pred = model.predict(X_train)
     val_pred = model.predict(X_val)
-
-    # ======================================================
-    # METRICS
-    # ======================================================
 
     train_mae = mean_absolute_error(y_train, train_pred)
     train_rmse = np.sqrt(mean_squared_error(y_train, train_pred))
@@ -223,9 +193,6 @@ with mlflow.start_run() as run:
     with open(METRICS_PATH, "w") as f:
         json.dump(metrics_payload, f, indent=2)
 
-    # ======================================================
-    # PLOT 1: VALIDATION ACTUAL VS PREDICTED
-    # ======================================================
 
     fig1 = plt.figure(figsize=(16, 6))
     plt.plot(y_val.values[:200], label="Actual")
@@ -240,10 +207,6 @@ with mlflow.start_run() as run:
     mlflow.log_figure(fig1, "plots/validation_actual_vs_predicted.png")
     plt.close(fig1)
 
-
-    # ======================================================
-    # PLOT 2: VALIDATION AUTOREGRESSIVE 168-HOUR FORECAST
-    # ======================================================
 
     future_hours = min(168, len(val_df))
     history = train_fit["Global_active_power"].iloc[-24:].tolist()

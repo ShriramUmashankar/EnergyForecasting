@@ -17,9 +17,8 @@ with open("data/processed/live_data.csv.dvc", "r") as f:
 
 print(f"Filtering for experiments matching data hash: {CURRENT_DATA_HASH}")
 
-# ==========================================================
-# STEP 1: Fetch DVC experiments in CSV format
-# ==========================================================
+# Fetch DVC experiments in CSV format
+
 print("Fetching DVC experiments via CSV...")
 result = subprocess.run(
     ["dvc", "exp", "show", "--csv"],
@@ -31,29 +30,23 @@ result = subprocess.run(
 # Parse the CSV output just like a standard spreadsheet
 reader = csv.DictReader(io.StringIO(result.stdout))
 
-# ==========================================================
-# STEP 2: Find best globally based on table columns
-# ==========================================================
+# Find best globally based on table columns
+
 best_exp = None
 best_rmse = float("inf")
 
 for row in reader:
-    # Get the experiment name (e.g., 'sharp-oast') or fallback to 'rev' hash
+
     exp_name = row.get("Experiment")
     rev = row.get("rev", "")
     
-    # Skip the workspace (we can't 'dvc exp apply' the workspace to itself)
     if exp_name == "workspace" or rev == "workspace":
         continue
-    # --- THE HASH FILTER ---
-    # DVC CSV output usually names the column by the file path
-    # We check if the hash in the table matches our CURRENT workspace hash
+
     row_hash = row.get("data/processed/live_data.csv")
     if row_hash != CURRENT_DATA_HASH:
         continue
-    # Search the row keys for our target metric. 
-    # Depending on the DVC version, the column header might be 'val.rmse' 
-    # or 'model/metrics.json:val.rmse'. This safely catches both.
+
     rmse = None
     for key, value in row.items():
         if key and "val.rmse" in key and value.strip() != "":
@@ -63,7 +56,6 @@ for row in reader:
             except ValueError:
                 continue
                 
-    # Evaluate if this is the best one
     if rmse is not None and rmse < best_rmse:
         best_rmse = rmse
         best_exp = exp_name if exp_name else rev
@@ -74,9 +66,8 @@ if best_exp is None:
 print(f"Best Experiment : {best_exp}")
 print(f"Best Val RMSE   : {best_rmse}")
 
-# ==========================================================
-# STEP 3: Apply best params locally
-# ==========================================================
+# Apply best params locally
+
 print(f"Applying best experiment: {best_exp}...")
 subprocess.run(["dvc", "exp", "apply", best_exp], check=True)
 
@@ -100,9 +91,8 @@ registered = mlflow.register_model(
 version = registered.version
 print(f"Registered Version: {version}")
 
-# ==========================================================
-# STEP 6: Promote to Production
-# ==========================================================
+# Promote to Production
+
 client.transition_model_version_stage(
     name=MODEL_NAME,
     version=version,

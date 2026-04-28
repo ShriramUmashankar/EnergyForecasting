@@ -4,17 +4,16 @@ import requests
 from airflow import DAG
 from datetime import datetime, timedelta
 
-# AIRFLOW 3.0 UPDATED IMPORTS
 from airflow.providers.standard.operators.python import PythonOperator, BranchPythonOperator
 from airflow.providers.standard.operators.trigger_dagrun import TriggerDagRunOperator
 from airflow.providers.standard.operators.empty import EmptyOperator
-from airflow.models import Variable  # Airflow 3 SDK for task-safe variables
+from airflow.models import Variable  
 
 PROJECT_ROOT = "/opt/airflow/project"
 API_PREDICT_URL = "http://fastapi-backend:8000/predict"
 API_METRICS_URL = "http://fastapi-backend:8000/stats"
 
-# Set threshold to 4 for your testing
+# Set threshold 
 RMSE_THRESHOLD = 0.5
 ROW_DELTA_THRESHOLD = 168
 
@@ -25,27 +24,27 @@ default_args = {
 }
 
 def pop_and_predict():
-    # Paths based on your setup
+    # Relative paths
     test_path = os.path.join(PROJECT_ROOT, "data/processed/test.csv")
     live_path = os.path.join(PROJECT_ROOT, "data/processed/live_data.csv")
 
-    # 1. Read test data
+    # Read test data
     df_test = pd.read_csv(test_path)
     if len(df_test) == 0:
         raise ValueError("test.csv is empty! Simulation complete.")
 
-    # 2. Extract the first row
+    # Extract the first row
     top_row = df_test.iloc[[0]]
     df_remaining = df_test.iloc[1:]
 
-    # 3. Physically update the files (The 'Pop' logic)
+    # Physically update the files
     df_remaining.to_csv(test_path, index=False)
     
     # Append to live_data (handles headers automatically)
     file_exists = os.path.exists(live_path) and os.path.getsize(live_path) > 0
     top_row.to_csv(live_path, mode='a', header=not file_exists, index=False)
 
-    # 4. Trigger Prediction API
+    # Trigger Prediction API
     payload = top_row.to_dict(orient='records')[0]
     payload['timestamp'] = str(payload['timestamp']) 
     
@@ -78,7 +77,7 @@ def check_retrain_conditions(**kwargs):
             print("Retrain is currently manually rejected by human. Ignoring triggers.")
             return 'skip_retrain'
 
-        # Instead of querying the database for active runs, we check the variable!
+
         if action == "pending":
             print("Retrain pipeline is already active (pending human approval). Skipping.")
             return 'skip_retrain'
