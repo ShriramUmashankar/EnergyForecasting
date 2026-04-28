@@ -53,6 +53,22 @@ This script will automatically:
 4. Start the full application and monitoring stack.
 5. Generate a `credentials_airflow.json` file in your root directory containing the secure login credentials for the Airflow UI.
 
+### Airflow Initial Configuration
+
+Once the application stack is running, you must configure the initial state variables inside Apache Airflow to enable the continuous training DAGs.
+
+1. Open the Airflow UI at [http://localhost:8080](http://localhost:8080).
+2. Log in using the username and password found in the generated `credentials_airflow.json` file.
+3. In the top navigation bar find and go to **Variables**.
+4. Click the **+ (Add a new record)** button and create the following two variables:
+
+| Key | Val | Description |
+| :--- | :--- | :--- |
+| `last_trained_row_count` | `0` | Tracks the size of the dataset during the last training run to detect new data. |
+| `retrain_action` | `ready` | Acts as a state lock to prevent concurrent training triggers. |
+
+Ensure these are spelled exactly as shown, as the Airflow DAGs depend on these specific keys to function.
+
 ## Resetting the Environment
 
 If you need to completely tear down the application, wipe all model history, clear database volumes, and start from a clean slate, run the reset script:
